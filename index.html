@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Black-Scholes Options Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:          #080b14;
+      --bg2:         #0c1020;
+      --card:        #101526;
+      --card2:       #141930;
+      --input-bg:    #090d1c;
+      --border:      #1c2238;
+      --border2:     #252d4a;
+      --text:        #d8dff5;
+      --text-dim:    #6b749e;
+      --text-faint:  #3a4060;
+      --accent:      #4f8ef7;
+      --accent-glow: rgba(79,142,247,0.12);
+      --green:       #00d48c;
+      --green-bg:    rgba(0,212,140,0.08);
+      --red:         #f04e6a;
+      --red-bg:      rgba(240,78,106,0.08);
+      --yellow:      #f5c518;
+      --purple:      #a07ff0;
+      --radius:      4px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: baseline; gap: 12px; }
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--text);
+    }
+    .header-title span { color: var(--accent); }
+    .header-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+    }
+    .header-badge {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-glow);
+      border: 1px solid rgba(79,142,247,0.25);
+      padding: 3px 10px;
+      border-radius: var(--radius);
+    }
+
+    /* ── Layout ── */
+    main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    .left-panel {
+      width: 340px;
+      flex-shrink: 0;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 0 0 24px 0;
+    }
+    .right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      overflow: hidden;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    /* ── Sections ── */
+    .section {
+      border-bottom: 1px solid var(--border);
+    }
+    .section-header {
+      padding: 10px 20px 8px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .section-body { padding: 16px 20px; }
+
+    /* ── Inputs ── */
+    .input-group { margin-bottom: 12px; }
+    .input-group:last-child { margin-bottom: 0; }
+    .input-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+      color: var(--text-dim);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+    }
+    .input-label .hint {
+      font-size: 9px;
+      color: var(--text-faint);
+    }
+    .input-row { display: flex; align-items: center; gap: 8px; }
+    input[type="number"] {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+      appearance: textfield;
+    }
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-glow);
+    }
+    input[type="number"]::-webkit-inner-spin-button { display: none; }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 2px;
+      background: var(--border2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+      cursor: pointer;
+    }
+
+    /* ── Toggle ── */
+    .toggle-row {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border2);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .toggle-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      padding: 8px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .toggle-btn.active-call {
+      background: var(--green-bg);
+      color: var(--green);
+      border-right: 1px solid var(--border2);
+    }
+    .toggle-btn.active-put {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    /* ── Pricing output ── */
+    .price-display {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .price-main {
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1;
+    }
+    .price-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    .breakdown-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .breakdown-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+    }
+    .breakdown-item .bd-label {
+      font-size: 9px;
+      color: var(--text-faint);
+      letter-spacing: 0.12em;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+    }
+    .breakdown-item .bd-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .meta-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+    }
+    .meta-item .m-label {
+      font-size: 9px;
+      color: var(--text-faint);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .meta-item .m-value {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+    .badge-itm { background: var(--green-bg); color: var(--green); border: 1px solid rgba(0,212,140,0.2); }
+    .badge-atm { background: rgba(245,197,24,0.1); color: var(--yellow); border: 1px solid rgba(245,197,24,0.2); }
+    .badge-otm { background: var(--red-bg); color: var(--red); border: 1px solid rgba(240,78,106,0.2); }
+
+    /* ── Greeks ── */
+    .greeks-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .greek-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .greek-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .greek-card.delta::before  { background: var(--accent); }
+    .greek-card.gamma::before  { background: var(--purple); }
+    .greek-card.theta::before  { background: var(--red); }
+    .greek-card.vega::before   { background: var(--yellow); }
+
+    .greek-symbol {
+      font-size: 18px;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      line-height: 1;
+    }
+    .greek-name {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .greek-value {
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .greek-desc {
+      font-size: 9px;
+      color: var(--text-faint);
+      line-height: 1.4;
+    }
+    .delta .greek-value  { color: var(--accent); }
+    .gamma .greek-value  { color: var(--purple); }
+    .theta .greek-value  { color: var(--red); }
+    .vega .greek-value   { color: var(--yellow); }
+
+    /* ── Charts ── */
+    .chart-card {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px 8px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .chart-title {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+    .chart-meta {
+      font-size: 9px;
+      color: var(--text-faint);
+    }
+    .chart-body {
+      flex: 1;
+      padding: 12px 16px;
+      position: relative;
+      min-height: 0;
+    }
+    canvas { width: 100% !important; height: 100% !important; }
+
+    /* ── Scrollbar ── */
+    .left-panel::-webkit-scrollbar { width: 4px; }
+    .left-panel::-webkit-scrollbar-track { background: transparent; }
+    .left-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    /* ── d1/d2 row ── */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-row span:last-child { color: var(--text); }
+
+    @media (max-width: 900px) {
+      main { flex-direction: column; }
+      .left-panel { width: 100%; height: auto; overflow: visible; border-right: none; border-bottom: 1px solid var(--border); }
+      .right-panel { height: 800px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="header-title"><span>HALO</span> // OPTIONS VISUALIZER</div>
+    <div class="header-sub">EUROPEAN STYLE &nbsp;·&nbsp; CONTINUOUS DIVIDEND = 0</div>
+  </div>
+  <div class="header-badge">BLACK-SCHOLES MODEL</div>
+</header>
+
+<main>
+
+  <!-- ── LEFT PANEL ── -->
+  <div class="left-panel">
+
+    <!-- Parameters -->
+    <div class="section">
+      <div class="section-header">Parameters</div>
+      <div class="section-body">
+
+        <div class="input-group">
+          <div class="input-label">
+            <span>OPTION TYPE</span>
+          </div>
+          <div class="toggle-row">
+            <button class="toggle-btn active-call" id="btn-call" onclick="setType('call')">CALL</button>
+            <button class="toggle-btn" id="btn-put" onclick="setType('put')">PUT</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">
+            <span>STOCK PRICE (S)</span>
+            <span class="hint">underlying</span>
+          </div>
+          <input type="number" id="stockPrice" value="100" min="0.01" step="0.5" oninput="update()">
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">
+            <span>STRIKE PRICE (K)</span>
+            <span class="hint">exercise</span>
+          </div>
+          <input type="number" id="strikePrice" value="100" min="0.01" step="0.5" oninput="update()">
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">
+            <span>TIME TO EXPIRY (T)</span>
+            <span class="hint" id="days-hint">182d</span>
+          </div>
+          <input type="number" id="timeExpiry" value="0.5" min="0.001" max="10" step="0.01" oninput="update()">
+        </div>
+
+        <div class="input-group">
+          <div class="input-label">
+            <span>RISK-FREE RATE (r)</span>
+            <span class="hint">annual %</span>
+          </div>
+          <input type="number" id="riskFreeRate" value="5" min="0" max="50" step="0.1" oninput="update()">
+        </div>
+
+        <div class="input-group" style="margin-bottom:0">
+          <div class="input-label">
+            <span>IMPLIED VOLATILITY (σ)</span>
+            <span class="hint">annual %</span>
+          </div>
+          <input type="number" id="impliedVol" value="25" min="1" max="300" step="0.5" oninput="update()">
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Pricing -->
+    <div class="section">
+      <div class="section-header">Pricing</div>
+      <div class="section-body">
+
+        <div class="price-display">
+          <div class="price-main" id="optionPrice">$0.00</div>
+          <div class="price-label">OPTION PRICE</div>
+        </div>
+
+        <div class="breakdown-row">
+          <div class="breakdown-item">
+            <div class="bd-label">Intrinsic</div>
+            <div class="bd-value" id="intrinsicVal">$0.00</div>
+          </div>
+          <div class="breakdown-item">
+            <div class="bd-label">Time Value</div>
+            <div class="bd-value" id="timeVal">$0.00</div>
+          </div>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="m-label">Moneyness</div>
+            <div class="m-value" id="moneyness"><span class="badge badge-atm">ATM</span></div>
+          </div>
+          <div class="meta-item">
+            <div class="m-label">Breakeven</div>
+            <div class="m-value" id="breakeven">$0.00</div>
+          </div>
+          <div class="meta-item">
+            <div class="m-label">Max Loss</div>
+            <div class="m-value" id="maxLoss" style="color:var(--red)">$0.00</div>
+          </div>
+        </div>
+
+        <!-- d1/d2 stats -->
+        <div style="margin-top:14px;">
+          <div class="stat-row"><span>d₁</span><span id="d1val">0.0000</span></div>
+          <div class="stat-row"><span>d₂</span><span id="d2val">0.0000</span></div>
+          <div class="stat-row"><span>N(d₁)</span><span id="nd1val">0.0000</span></div>
+          <div class="stat-row"><span>N(d₂)</span><span id="nd2val">0.0000</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Greeks -->
+    <div class="section" style="border-bottom:none;">
+      <div class="section-header">Greeks</div>
+      <div class="section-body">
+        <div class="greeks-grid">
+
+          <div class="greek-card delta">
+            <div class="greek-symbol">Δ</div>
+            <div class="greek-name">Delta</div>
+            <div class="greek-value" id="g-delta">0.0000</div>
+            <div class="greek-desc">$ change per<br>$1 move in S</div>
+          </div>
+
+          <div class="greek-card gamma">
+            <div class="greek-symbol">Γ</div>
+            <div class="greek-name">Gamma</div>
+            <div class="greek-value" id="g-gamma">0.0000</div>
+            <div class="greek-desc">Δ change per<br>$1 move in S</div>
+          </div>
+
+          <div class="greek-card theta">
+            <div class="greek-symbol">Θ</div>
+            <div class="greek-name">Theta</div>
+            <div class="greek-value" id="g-theta">0.0000</div>
+            <div class="greek-desc">$ change per<br>day elapsed</div>
+          </div>
+
+          <div class="greek-card vega">
+            <div class="greek-symbol">ν</div>
+            <div class="greek-name">Vega</div>
+            <div class="greek-value" id="g-vega">0.0000</div>
+            <div class="greek-desc">$ change per<br>1% σ move</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- ── RIGHT PANEL ── -->
+  <div class="right-panel">
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Payoff at Expiry</div>
+        <div class="chart-meta" id="payoff-meta">P&amp;L = f(S<sub>T</sub>)</div>
+      </div>
+      <div class="chart-body">
+        <canvas id="payoffChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">Option Price vs Implied Volatility</div>
+        <div class="chart-meta" id="iv-meta">σ range: 1% – 150%</div>
+      </div>
+      <div class="chart-body">
+        <canvas id="ivChart"></canvas>
+      </div>
+    </div>
+
+  </div><!-- /right-panel -->
+
+</main>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+//  Math
+// ─────────────────────────────────────────────────────────────────────────────
+
+function normalCDF(x) {
+  const a1= 0.254829592, a2=-0.284496736, a3= 1.421413741,
+        a4=-1.453152027, a5= 1.061405429, p = 0.3275911;
+  const sign = x < 0 ? -1 : 1;
+  x = Math.abs(x) / Math.SQRT2;
+  const t = 1 / (1 + p * x);
+  const y = 1 - (((((a5*t + a4)*t + a3)*t + a2)*t + a1)*t) * Math.exp(-x*x);
+  return 0.5 * (1 + sign * y);
+}
+
+function normalPDF(x) {
+  return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+
+function bs(S, K, T, r, sigma, isCall) {
+  if (T <= 0) {
+    const price = isCall ? Math.max(S - K, 0) : Math.max(K - S, 0);
+    return { price, d1: 0, d2: 0 };
+  }
+  const sqrtT = Math.sqrt(T);
+  const d1 = (Math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
+  const d2 = d1 - sigma * sqrtT;
+  const eRT = Math.exp(-r * T);
+  const price = isCall
+    ? S * normalCDF(d1)  - K * eRT * normalCDF(d2)
+    : K * eRT * normalCDF(-d2) - S * normalCDF(-d1);
+  return { price: Math.max(price, 0), d1, d2 };
+}
+
+function greeks(S, K, T, r, sigma, isCall) {
+  if (T <= 1e-6) {
+    return { delta: isCall ? (S>K?1:0) : (S<K?-1:0), gamma:0, theta:0, vega:0 };
+  }
+  const sqrtT = Math.sqrt(T);
+  const { d1, d2 } = bs(S, K, T, r, sigma, isCall);
+  const pdf1 = normalPDF(d1);
+  const eRT  = Math.exp(-r * T);
+
+  const delta = isCall ? normalCDF(d1) : normalCDF(d1) - 1;
+  const gamma = pdf1 / (S * sigma * sqrtT);
+  const thetaBase = -(S * pdf1 * sigma) / (2 * sqrtT);
+  const theta = isCall
+    ? (thetaBase - r * K * eRT * normalCDF( d2)) / 365
+    : (thetaBase + r * K * eRT * normalCDF(-d2)) / 365;
+  const vega = S * pdf1 * sqrtT / 100;
+
+  return { delta, gamma, theta, vega };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  State
+// ─────────────────────────────────────────────────────────────────────────────
+
+let isCall = true;
+
+function setType(type) {
+  isCall = (type === 'call');
+  document.getElementById('btn-call').className =
+    'toggle-btn' + (isCall ? ' active-call' : '');
+  document.getElementById('btn-put').className =
+    'toggle-btn' + (!isCall ? ' active-put' : '');
+  update();
+}
+
+function getInputs() {
+  const S     = parseFloat(document.getElementById('stockPrice').value)  || 100;
+  const K     = parseFloat(document.getElementById('strikePrice').value) || 100;
+  const T     = parseFloat(document.getElementById('timeExpiry').value)  || 0.5;
+  const rPct  = parseFloat(document.getElementById('riskFreeRate').value)|| 5;
+  const sPct  = parseFloat(document.getElementById('impliedVol').value)  || 25;
+  return { S, K, T, r: rPct/100, sigma: sPct/100 };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Charts
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GRID_COLOR   = 'rgba(255,255,255,0.04)';
+const TICK_COLOR   = '#3a4060';
+const GREEN        = '#00d48c';
+const RED          = '#f04e6a';
+const ACCENT       = '#4f8ef7';
+const PURPLE       = '#a07ff0';
+
+const baseChartOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 180 },
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#141930',
+      borderColor: '#252d4a',
+      borderWidth: 1,
+      titleColor: '#6b749e',
+      bodyColor: '#d8dff5',
+      padding: 10,
+      titleFont: { family: 'IBM Plex Mono', size: 10 },
+      bodyFont:  { family: 'IBM Plex Mono', size: 11, weight: '500' },
+    }
+  },
+  scales: {
+    x: {
+      grid: { color: GRID_COLOR },
+      ticks: { color: TICK_COLOR, font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 8 },
+      border: { color: '#1c2238' },
+    },
+    y: {
+      grid: { color: GRID_COLOR },
+      ticks: { color: TICK_COLOR, font: { family: 'IBM Plex Mono', size: 9 }, maxTicksLimit: 6 },
+      border: { color: '#1c2238' },
+    }
+  }
+};
+
+// Payoff chart
+const payoffCtx = document.getElementById('payoffChart').getContext('2d');
+const payoffChart = new Chart(payoffCtx, {
+  type: 'line',
+  data: { labels: [], datasets: [
+    // Dataset 0: green fill (profit zone)
+    {
+      data: [], borderWidth: 0, pointRadius: 0,
+      fill: 'origin',
+      backgroundColor: 'rgba(0,212,140,0.10)',
+      tension: 0,
+    },
+    // Dataset 1: red fill (loss zone)
+    {
+      data: [], borderWidth: 0, pointRadius: 0,
+      fill: 'origin',
+      backgroundColor: 'rgba(240,78,106,0.10)',
+      tension: 0,
+    },
+    // Dataset 2: main payoff line
+    {
+      data: [], borderWidth: 1.5, pointRadius: 0,
+      tension: 0,
+      segment: {
+        borderColor: ctx => ctx.p1.parsed.y >= 0 ? GREEN : RED,
+      },
+      fill: false,
+    },
+    // Dataset 3: zero line / cost basis
+    {
+      data: [], borderWidth: 1, borderDash: [4,4],
+      borderColor: 'rgba(255,255,255,0.12)',
+      pointRadius: 0, fill: false,
+    }
+  ]},
+  options: {
+    ...baseChartOpts,
+    plugins: {
+      ...baseChartOpts.plugins,
+      tooltip: {
+        ...baseChartOpts.plugins.tooltip,
+        callbacks: {
+          title: items => `S at expiry: $${parseFloat(items[0].label).toFixed(2)}`,
+          label: items => {
+            if (items.datasetIndex !== 2) return null;
+            const v = items.parsed.y;
+            return `P/L: ${v >= 0 ? '+' : ''}$${v.toFixed(4)}`;
+          },
+          filter: item => item.datasetIndex === 2,
+        }
+      }
+    },
+    scales: {
+      ...baseChartOpts.scales,
+      x: {
+        ...baseChartOpts.scales.x,
+        title: {
+          display: true,
+          text: 'Stock Price at Expiry ($)',
+          color: TICK_COLOR,
+          font: { family: 'IBM Plex Mono', size: 9 },
+          padding: { top: 4 }
+        },
+        ticks: {
+          ...baseChartOpts.scales.x.ticks,
+          callback: v => '$' + parseFloat(v).toFixed(0)
+        }
+      },
+      y: {
+        ...baseChartOpts.scales.y,
+        title: {
+          display: true,
+          text: 'Profit / Loss ($)',
+          color: TICK_COLOR,
+          font: { family: 'IBM Plex Mono', size: 9 },
+          padding: { bottom: 4 }
+        },
+        ticks: {
+          ...baseChartOpts.scales.y.ticks,
+          callback: v => (v >= 0 ? '+' : '') + '$' + v.toFixed(2)
+        }
+      }
+    }
+  }
+});
+
+// IV chart
+const ivCtx = document.getElementById('ivChart').getContext('2d');
+const ivChart = new Chart(ivCtx, {
+  type: 'line',
+  data: { labels: [], datasets: [
+    {
+      data: [], borderColor: ACCENT, borderWidth: 1.5,
+      pointRadius: 0, tension: 0.3,
+      fill: true,
+      backgroundColor: ctx => {
+        const chart = ctx.chart;
+        const { ctx: c, chartArea } = chart;
+        if (!chartArea) return 'transparent';
+        const grad = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+        grad.addColorStop(0, 'rgba(79,142,247,0.15)');
+        grad.addColorStop(1, 'rgba(79,142,247,0.01)');
+        return grad;
+      }
+    },
+    // Current IV marker (vertical dashed line via single point)
+    {
+      data: [], borderColor: 'rgba(245,197,24,0.5)', borderWidth: 1,
+      borderDash: [3,3], pointRadius: 5,
+      pointBackgroundColor: '#f5c518',
+      pointBorderColor: '#141930', pointBorderWidth: 2,
+      fill: false, tension: 0,
+    }
+  ]},
+  options: {
+    ...baseChartOpts,
+    plugins: {
+      ...baseChartOpts.plugins,
+      tooltip: {
+        ...baseChartOpts.plugins.tooltip,
+        callbacks: {
+          title: items => `IV: ${parseFloat(items[0].label).toFixed(1)}%`,
+          label: items => `Price: $${items[0].parsed.y.toFixed(4)}`,
+          filter: item => item.datasetIndex === 0,
+        }
+      }
+    },
+    scales: {
+      ...baseChartOpts.scales,
+      x: {
+        ...baseChartOpts.scales.x,
+        title: {
+          display: true, text: 'Implied Volatility (%)',
+          color: TICK_COLOR, font: { family: 'IBM Plex Mono', size: 9 },
+          padding: { top: 4 }
+        },
+        ticks: { ...baseChartOpts.scales.x.ticks, callback: v => v + '%' }
+      },
+      y: {
+        ...baseChartOpts.scales.y,
+        title: {
+          display: true, text: 'Option Price ($)',
+          color: TICK_COLOR, font: { family: 'IBM Plex Mono', size: 9 },
+          padding: { bottom: 4 }
+        },
+        ticks: { ...baseChartOpts.scales.y.ticks, callback: v => '$' + v.toFixed(2) },
+        min: 0,
+      }
+    }
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Main update
+// ─────────────────────────────────────────────────────────────────────────────
+
+function fmt(n, dp=2)  { return '$' + Math.abs(n).toFixed(dp); }
+function fmtS(n, dp=4) { return (n >= 0 ? '+' : '-') + Math.abs(n).toFixed(dp); }
+
+function update() {
+  const { S, K, T, r, sigma } = getInputs();
+
+  // Days hint
+  document.getElementById('days-hint').textContent =
+    Math.round(T * 365) + 'd';
+
+  // Price
+  const { price, d1, d2 } = bs(S, K, T, r, sigma, isCall);
+  const intrinsic = isCall ? Math.max(S - K, 0) : Math.max(K - S, 0);
+  const timeValue = Math.max(price - intrinsic, 0);
+  const breakeven = isCall ? K + price : K - price;
+  const maxLoss   = price;
+
+  document.getElementById('optionPrice').textContent = '$' + price.toFixed(4);
+  document.getElementById('intrinsicVal').textContent = '$' + intrinsic.toFixed(4);
+  document.getElementById('timeVal').textContent      = '$' + timeValue.toFixed(4);
+  document.getElementById('breakeven').textContent    = '$' + breakeven.toFixed(2);
+  document.getElementById('maxLoss').textContent      = '-$' + maxLoss.toFixed(4);
+
+  // d1/d2
+  document.getElementById('d1val').textContent  = d1.toFixed(4);
+  document.getElementById('d2val').textContent  = d2.toFixed(4);
+  document.getElementById('nd1val').textContent = normalCDF(d1).toFixed(4);
+  document.getElementById('nd2val').textContent = normalCDF(d2).toFixed(4);
+
+  // Moneyness
+  const diff = (S - K) / K;
+  let mLabel, mClass;
+  if (Math.abs(diff) < 0.005) {
+    mLabel = 'ATM'; mClass = 'badge-atm';
+  } else if ((isCall && S > K) || (!isCall && S < K)) {
+    mLabel = 'ITM'; mClass = 'badge-itm';
+  } else {
+    mLabel = 'OTM'; mClass = 'badge-otm';
+  }
+  document.getElementById('moneyness').innerHTML =
+    `<span class="badge ${mClass}">${mLabel}</span>`;
+
+  // Greeks
+  const g = greeks(S, K, T, r, sigma, isCall);
+  document.getElementById('g-delta').textContent = g.delta.toFixed(4);
+  document.getElementById('g-gamma').textContent = g.gamma.toFixed(5);
+  document.getElementById('g-theta').textContent = g.theta.toFixed(4);
+  document.getElementById('g-vega').textContent  = g.vega.toFixed(4);
+
+  // ── Payoff chart ──────────────────────────────────────────────────────────
+  const lo   = Math.max(0.01, Math.min(S, K) * 0.55);
+  const hi   = Math.max(S, K) * 1.50;
+  const N    = 120;
+  const step = (hi - lo) / N;
+
+  const labels    = [];
+  const payoff    = [];
+  const profitFill= [];  // green fill: positive values only (clamped at 0)
+  const lossFill  = [];  // red fill:   negative values only (clamped at 0)
+  const zeroline  = [];
+
+  for (let i = 0; i <= N; i++) {
+    const sT = lo + i * step;
+    const pl = isCall
+      ? Math.max(sT - K, 0) - price
+      : Math.max(K - sT, 0) - price;
+    labels.push(sT.toFixed(2));
+    payoff.push(pl);
+    profitFill.push(Math.max(pl, 0));
+    lossFill.push(Math.min(pl, 0));
+    zeroline.push(0);
+  }
+
+  payoffChart.data.labels          = labels;
+  payoffChart.data.datasets[0].data= profitFill;
+  payoffChart.data.datasets[1].data= lossFill;
+  payoffChart.data.datasets[2].data= payoff;
+  payoffChart.data.datasets[3].data= zeroline;
+
+  const beIdx = labels.findIndex(l => parseFloat(l) >= breakeven);
+  document.getElementById('payoff-meta').textContent =
+    `breakeven: $${breakeven.toFixed(2)}  |  max loss: -$${price.toFixed(4)}`;
+
+  payoffChart.update('none');
+
+  // ── IV chart ──────────────────────────────────────────────────────────────
+  const ivLabels = [];
+  const ivPrices = [];
+  for (let iv = 1; iv <= 150; iv += 1) {
+    ivLabels.push(iv);
+    const p = bs(S, K, T, r, iv/100, isCall);
+    ivPrices.push(parseFloat(p.price.toFixed(6)));
+  }
+
+  // Current IV dot
+  const curIV   = (sigma * 100).toFixed(1);
+  const curIdx  = Math.round(sigma * 100) - 1;
+  const dotData = ivLabels.map((_, i) => i === curIdx ? ivPrices[i] : null);
+
+  ivChart.data.labels          = ivLabels;
+  ivChart.data.datasets[0].data= ivPrices;
+  ivChart.data.datasets[1].data= dotData;
+
+  document.getElementById('iv-meta').textContent =
+    `current σ: ${(sigma*100).toFixed(1)}%  |  price: $${price.toFixed(4)}`;
+
+  ivChart.update('none');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Init
+// ─────────────────────────────────────────────────────────────────────────────
+update();
+</script>
+</body>
+</html>
