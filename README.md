@@ -2,8 +2,7 @@
 
 A Black-Scholes options pricing tool built as a single standalone HTML file.
 
-**Live tool:** [https://colinwhetstone.github.io/options-visualizer](https://colinwhetstone.github.io/options-visualizer)
-
+**Live tool:** https://colinwhetstone.github.io/black-scholes-visualizer/
 ---
 
 ## Features
