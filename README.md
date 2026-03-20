@@ -1,4 +1,4 @@
-# HALO Options Visualizer
+# Options Visualizer
 
 A Black-Scholes options pricing tool built as a single standalone HTML file.
 
