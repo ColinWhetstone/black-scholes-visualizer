@@ -1,6 +1,6 @@
 # HALO Options Visualizer
 
-A professional Black-Scholes options pricing tool built as a single standalone HTML file. No build step, no server, no dependencies beyond Chart.js.
+A Black-Scholes options pricing tool built as a single standalone HTML file.
 
 **Live tool:** [https://colinwhetstone.github.io/options-visualizer](https://colinwhetstone.github.io/options-visualizer)
 
@@ -61,19 +61,4 @@ This tool is hosted at:
 
 **[https://colinwhetstone.github.io/options-visualizer](https://colinwhetstone.github.io/options-visualizer)**
 
-To enable GitHub Pages for this repo:
-1. Go to the repository on GitHub → **Settings** → **Pages**
-2. Under *Source*, select **Deploy from a branch**
-3. Choose branch: `main`, folder: `/ (root)`
-4. Click **Save** — the site will be live in ~60 seconds
 
----
-
-## Implementation Notes
-
-- Pure vanilla JavaScript — no frameworks
-- Single HTML file with all CSS and JS inline
-- Only external dependency: [Chart.js 4.4.1](https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js) from cdnjs
-- Font: IBM Plex Mono via Google Fonts
-- Assumes European-style options, zero continuous dividend yield
-- Normal CDF computed via Abramowitz & Stegun approximation (error < 1.5×10⁻⁷)
